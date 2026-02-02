@@ -40,6 +40,7 @@ export const CustomThemeProvider = ({
         // Text Colors
         textPrimary: "#1A1A1A", // Near black for high readability
         textSecondary: "#6C757D", // Muted gray for subtitles
+        textTertiary: "#089FFF",
         textInverse: "#FFFFFF", // White text on dark backgrounds
       },
       spacing: {
@@ -51,14 +52,22 @@ export const CustomThemeProvider = ({
       },
       fontSize: {
         small: moderateScale(12),
-        medium: moderateScale(16),
-        large: moderateScale(20),
-        title: moderateScale(32),
+        medium: moderateScale(20),
+        large: moderateScale(32),
+        title: moderateScale(48),
+      },
+      fonts: {
+        regular: "Roboto-Regular",
+        medium: "Roboto-Medium",
+        bold: "Roboto-Bold",
+        mono: "SpaceMono",
       },
       // Expose the raw functions if needed for custom values
       scale,
       verticalScale,
       ms: moderateScale,
+      screenWidth: width,
+      screenHeight: height,
     };
   }, [width, height]);
 
@@ -80,52 +89,3 @@ export const useTheme = () => {
   }
   return context;
 };
-
-/* export const Colors = {
-  // Medical Palette
-  primary: "#2A52BE", // Trustworthy clinical blue
-  secondary: "#00A86B", // Calm medical green (useful for "Correct" answers)
-  accent: "#FF8C00", // Soft orange for alerts or "Pending" items
-
-  // Neutral Colors
-  background: "#F8F9FA", // Very light gray (easy on the eyes for long reading)
-  surface: "#FFFFFF", // White for cards and containers
-  border: "#E9ECEF",
-
-  // Text Colors
-  textPrimary: "#1A1A1A", // Near black for high readability
-  textSecondary: "#6C757D", // Muted gray for subtitles
-  textInverse: "#FFFFFF", // White text on dark backgrounds
-};
-
-export const Typography = {
-  title: {
-    fontFamily: "Roboto-Bold",
-    fontSize: 48,
-    color: Colors.textPrimary,
-  },
-  subTitle: {
-    fontFamily: "Roboto-Regular",
-    fontSize: 18,
-    color: Colors.textPrimary,
-  },
-  body: {
-    fontFamily: "Roboto-Regular",
-    fontSize: 16,
-    color: Colors.textPrimary,
-    lineHeight: 24, // Crucial for reading long medical texts
-  },
-  caption: {
-    fontFamily: "Roboto-Regular",
-    fontSize: 12,
-    color: Colors.textSecondary,
-  },
-};
-
-export const Spacing = {
-  xs: 4,
-  s: 8,
-  m: 16,
-  l: 24,
-  xl: 32,
-}; */
