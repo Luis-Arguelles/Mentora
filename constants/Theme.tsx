@@ -3,8 +3,11 @@ import {
   DefaultTheme,
   ThemeProvider as NavProvider,
 } from "@react-navigation/native";
-import React, { createContext, useContext, useMemo } from "react";
-import { useColorScheme, useWindowDimensions } from "react-native";
+import * as NavigationBar from "expo-navigation-bar";
+import { StatusBar } from "expo-status-bar";
+import React, { createContext, useContext, useEffect, useMemo } from "react";
+import { Platform, useColorScheme, useWindowDimensions } from "react-native";
+import { SafeAreaProvider } from "react-native-safe-area-context";
 
 const GUIDELINE_BASE_WIDTH = 393;
 const GUIDELINE_BASE_HEIGHT = 852;
@@ -71,13 +74,22 @@ export const CustomThemeProvider = ({
     };
   }, [width, height]);
 
+  useEffect(() => {
+    if (Platform.OS === "android") {
+      NavigationBar.setButtonStyleAsync("dark");
+    }
+  }, [colorScheme]);
+
   return (
-    <ThemeContext.Provider value={theme}>
-      {/* Wrap the Navigation Provider inside your custom one here! */}
-      <NavProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
-        {children}
-      </NavProvider>
-    </ThemeContext.Provider>
+    <SafeAreaProvider>
+      <ThemeContext.Provider value={theme}>
+        {/* Wrap the Navigation Provider inside your custom one here! */}
+        <StatusBar style="dark" translucent={true} />
+        <NavProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
+          {children}
+        </NavProvider>
+      </ThemeContext.Provider>
+    </SafeAreaProvider>
   );
 };
 
