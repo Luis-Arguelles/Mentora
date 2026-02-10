@@ -31,7 +31,7 @@ export const CustomThemeProvider = ({
 
     return {
       colors: {
-        primary: "#6200ee",
+        primary: "#089FFF",
         secondary: "#00A86B",
         accent: "#FF8C00",
 

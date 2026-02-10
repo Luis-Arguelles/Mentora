@@ -1,13 +1,13 @@
 import { useTheme } from "@/providers/ThemeProvider";
 import { StyleSheet, Text, View } from "react-native";
 
-const Profile = () => {
+const Study = () => {
   const theme = useTheme();
   const styles = createStyles(theme);
 
   return (
     <View style={styles.mainContainer}>
-      <Text style={styles.defaultText}>Home screen</Text>
+      <Text style={styles.defaultText}>Study screen</Text>
     </View>
   );
 };
@@ -25,4 +25,4 @@ const createStyles = (theme: any) =>
     },
   });
 
-export default Profile;
+export default Study;

@@ -1,9 +1,27 @@
-import { useTheme } from "@/constants/Theme";
-import { Image, StyleSheet, Text, TextInput, View } from "react-native";
+import { supabase } from "@/lib/supabase";
+import { useTheme } from "@/providers/ThemeProvider";
+import { useState } from "react";
+import { Alert, Image, StyleSheet, Text, TextInput, View } from "react-native";
+
 const loginBrain = require("@/assets/images/loginBrain.png");
 
 const Login = () => {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
   const theme = useTheme();
+
+  async function signInWithEmail() {
+    setLoading(true);
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (error) Alert.alert("Error", error.message);
+    setLoading(false);
+  }
+
   const styles = createStyles(theme);
 
   return (

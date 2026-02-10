@@ -1,5 +1,6 @@
 import { useColorScheme } from "@/components/useColorScheme";
-import { CustomThemeProvider } from "@/constants/Theme";
+import { useAuth } from "@/providers/AuthProvider";
+import { CustomThemeProvider } from "@/providers/ThemeProvider";
 import {
   Roboto_400Regular,
   Roboto_500Medium,
@@ -7,16 +8,16 @@ import {
 } from "@expo-google-fonts/roboto";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
 import { useFonts } from "expo-font";
-import { Stack } from "expo-router";
+import { Stack, useRouter } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { useEffect } from "react";
 import "react-native-reanimated";
 
 export { ErrorBoundary } from "expo-router";
 
-export const unstable_settings = {
-  initialRouteName: "(auth)/login",
-};
+// export const unstable_settings = {
+//   initialRouteName: "(tabs)",
+// };
 
 SplashScreen.preventAutoHideAsync();
 
@@ -28,6 +29,19 @@ export default function RootLayout() {
     "Roboto-Medium": Roboto_500Medium,
     ...FontAwesome.font,
   });
+
+  const { session, loading } = useAuth();
+  const router = useRouter();
+
+  // useEffect(() => {
+  //   if (loading) return;
+
+  //   if (session) {
+  //     router.replace("/(tabs)"); // User is logged in
+  //   } else {
+  //     router.replace("/(auth)/login"); // User is logged out
+  //   }
+  // }, [session, loading]);
 
   useEffect(() => {
     if (error) throw error;
@@ -51,7 +65,7 @@ function RootLayoutNav() {
 
   return (
     <CustomThemeProvider>
-      <Stack initialRouteName="(auth)/login">
+      <Stack initialRouteName="(tabs)">
         <Stack.Screen name="(auth)/login" options={{ headerShown: false }} />
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="modal" options={{ presentation: "modal" }} />

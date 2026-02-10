@@ -7,7 +7,7 @@ const Profile = () => {
 
   return (
     <View style={styles.mainContainer}>
-      <Text style={styles.defaultText}>Home screen</Text>
+      <Text style={styles.defaultText}>Profile screen</Text>
     </View>
   );
 };
