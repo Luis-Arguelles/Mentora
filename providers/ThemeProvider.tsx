@@ -32,8 +32,8 @@ export const CustomThemeProvider = ({
     return {
       colors: {
         primary: "#089FFF",
-        secondary: "#00A86B",
-        accent: "#FF8C00",
+        secondary: "#FF08A5",
+        tertiary: "#9808FF",
 
         // Neutral Colors
         background: "#F8F9FA", // Very light gray (easy on the eyes for long reading)

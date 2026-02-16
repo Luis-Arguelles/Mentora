@@ -16,8 +16,8 @@ export default function TabLayout() {
     <Tabs
       initialRouteName="index"
       screenOptions={{
-        tabBarActiveTintColor: theme.colors.primary,
-        tabBarInactiveTintColor: "black",
+        tabBarActiveTintColor: "black",
+        tabBarInactiveTintColor: theme.colors.primary,
         tabBarShowLabel: false,
         tabBarStyle: {
           position: "absolute",
