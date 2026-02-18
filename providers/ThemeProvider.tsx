@@ -55,7 +55,7 @@ export const CustomThemeProvider = ({
       },
       fontSize: {
         small: moderateScale(12),
-        medium: moderateScale(20),
+        medium: moderateScale(18),
         large: moderateScale(32),
         title: moderateScale(48),
       },

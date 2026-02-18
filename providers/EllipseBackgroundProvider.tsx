@@ -14,7 +14,6 @@ const EllipseBackgroundProvider = ({
 
   return (
     <View style={styles.container}>
-      {/* Wrap the Image in a View to use pointerEvents */}
       <View style={styles.leftEllipseContainer} pointerEvents="none">
         <Image
           source={require("@/assets/images/ellipse-left.png")}
@@ -42,25 +41,23 @@ const createStyles = (theme: any) =>
       flex: 1,
       backgroundColor: theme.colors.background,
     },
-    // Move the positioning logic to the View containers
     leftEllipseContainer: {
       position: "absolute",
-      left: -theme.scale(70),
-      top: "45%",
+      left: -theme.scale(100),
+      top: "35%",
       marginTop: -theme.verticalScale(150),
-      width: theme.scale(350),
-      height: theme.verticalScale(350),
+      width: theme.scale(500),
+      height: theme.verticalScale(500),
       opacity: 0.6,
     },
     rightEllipseContainer: {
       position: "absolute",
-      right: -theme.scale(70),
-      bottom: -theme.verticalScale(10),
-      width: theme.scale(350),
-      height: theme.verticalScale(350),
+      right: -theme.scale(100),
+      bottom: theme.verticalScale(20),
+      width: theme.scale(500),
+      height: theme.verticalScale(500),
       opacity: 0.6,
     },
-    // Let the image fill the container
     fullImage: {
       width: "100%",
       height: "100%",

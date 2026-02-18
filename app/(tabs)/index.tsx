@@ -1,11 +1,50 @@
 import ProgressBar from "@/components/ProgressBar";
+import TransparentBox from "@/components/transparentBox";
 import EllipseBackgroundProvider from "@/providers/EllipseBackgroundProvider";
 import { useTheme } from "@/providers/ThemeProvider";
-import { StyleSheet, Text, View } from "react-native";
+import { FlatList, StyleSheet, Text, View } from "react-native";
 
 const Home = () => {
   const theme = useTheme();
   const styles = createStyles(theme);
+
+  const homeFeatures = [
+    {
+      id: "1",
+      title: "Recomendación",
+      content: "Revisa tus estadisticas y retroalimentaciones.",
+    },
+    {
+      id: "2",
+      title: "Quizz diario",
+      content:
+        "Haz un test de 10 preguntas, con limite de tiempo, con tema selecto o mixto.",
+    },
+    {
+      id: "3",
+      title: "Notas",
+      content:
+        "Crea notas y resumenes de los temas de tu interes. Podrás pedir a Mentora que cree quiz de ello.",
+    },
+    {
+      id: "4",
+      title: "Simulador",
+      content:
+        "Temas selectos o mixtos. Al finalizar se te proporcionara un feedback de las áreas a reforzar.",
+    },
+    {
+      id: "5",
+      title: "Mentora",
+      content:
+        "Escribe y edita aqui las notas que consideres.¡Puedes escribir, guardar audios, fotos y mucho más!",
+    },
+    {
+      id: "6",
+      title: "Biblioteca",
+      content:
+        "Reviza y organiza tus fechas importantes, asimismo, contarás con un cronometraje para estas.",
+    },
+  ];
 
   return (
     <EllipseBackgroundProvider>
@@ -31,6 +70,21 @@ const Home = () => {
             <Text style={{ color: theme.colors.tertiary }}>Traumatología</Text>
           </View>
         </View>
+        <FlatList
+          data={homeFeatures}
+          numColumns={2}
+          renderItem={(homeFeature) => (
+            <TransparentBox
+              title={homeFeature.item.title}
+              content={homeFeature.item.content}
+              width={theme.scale(160)}
+              height={theme.verticalScale(140)}
+            />
+          )}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={styles.flatListContentContainerStyle}
+          columnWrapperStyle={{ gap: theme.spacing.m }}
+        />
       </View>
     </EllipseBackgroundProvider>
   );
@@ -45,7 +99,7 @@ const createStyles = (theme: any) =>
     textContainer: {
       justifyContent: "center",
       alignItems: "center",
-      marginTop: theme.verticalScale(100),
+      marginTop: theme.verticalScale(80),
     },
     subtitleText: {
       fontFamily: theme.fonts.regular,
@@ -58,7 +112,7 @@ const createStyles = (theme: any) =>
       color: theme.colors.textPrimary,
     },
     bestGradesContainer: {
-      marginTop: theme.spacing.l,
+      marginTop: theme.spacing.m,
       gap: theme.spacing.s,
     },
     bestGradeTitleText: {
@@ -70,6 +124,23 @@ const createStyles = (theme: any) =>
       flexDirection: "row",
       gap: theme.spacing.m,
     },
+    flatListContentContainerStyle: {
+      justifyContent: "center",
+      alignItems: "center",
+      paddingTop: theme.spacing.l,
+      paddingHorizontal: theme.spacing.s,
+      gap: theme.spacing.m,
+    },
+
+    // homePageFeaturesGridContainer: {
+    //   // flexDirection: "row",
+    //   // flexWrap: "wrap",
+    //   // // This handles the space between all rows and columns automatically
+    //   // gap: theme.spacing.xs,
+    //   // padding: theme.spacing.m,
+    //   // width: "45%", // Quick shortcut, or use the math below
+    //   // //height: theme.verticalScale(150),
+    // },
   });
 
 export default Home;
