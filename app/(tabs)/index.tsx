@@ -2,11 +2,13 @@ import ProgressBar from "@/components/ProgressBar";
 import TransparentBox from "@/components/transparentBox";
 import EllipseBackgroundProvider from "@/providers/EllipseBackgroundProvider";
 import { useTheme } from "@/providers/ThemeProvider";
+import { useRouter } from "expo-router";
 import { FlatList, StyleSheet, Text, View } from "react-native";
 
 const Home = () => {
   const theme = useTheme();
   const styles = createStyles(theme);
+  const router = useRouter();
 
   const homeFeatures = [
     {
@@ -46,6 +48,13 @@ const Home = () => {
     },
   ];
 
+  const handleOnPress = (id: string) => {
+    switch (id) {
+      case "5":
+        router.push("./mentora");
+    }
+  };
+
   return (
     <EllipseBackgroundProvider>
       <View style={styles.mainContainer}>
@@ -79,6 +88,7 @@ const Home = () => {
               content={homeFeature.item.content}
               width={theme.scale(160)}
               height={theme.verticalScale(140)}
+              handleOnPress={(e) => handleOnPress(homeFeature.item.id)}
             />
           )}
           keyExtractor={(item) => item.id}
@@ -131,16 +141,6 @@ const createStyles = (theme: any) =>
       paddingHorizontal: theme.spacing.s,
       gap: theme.spacing.m,
     },
-
-    // homePageFeaturesGridContainer: {
-    //   // flexDirection: "row",
-    //   // flexWrap: "wrap",
-    //   // // This handles the space between all rows and columns automatically
-    //   // gap: theme.spacing.xs,
-    //   // padding: theme.spacing.m,
-    //   // width: "45%", // Quick shortcut, or use the math below
-    //   // //height: theme.verticalScale(150),
-    // },
   });
 
 export default Home;

@@ -5,6 +5,7 @@ import {
   Roboto_400Regular,
   Roboto_500Medium,
   Roboto_700Bold,
+  Roboto_800ExtraBold,
 } from "@expo-google-fonts/roboto";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
 import { useFonts } from "expo-font";
@@ -27,6 +28,7 @@ export default function RootLayout() {
     "Roboto-Regular": Roboto_400Regular,
     "Roboto-Bold": Roboto_700Bold,
     "Roboto-Medium": Roboto_500Medium,
+    "Roboto-ExtraBold": Roboto_800ExtraBold,
     ...FontAwesome.font,
   });
 
@@ -68,7 +70,7 @@ function RootLayoutNav() {
       <Stack initialRouteName="(tabs)">
         <Stack.Screen name="(auth)/login" options={{ headerShown: false }} />
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="modal" options={{ presentation: "modal" }} />
+        {/* <Stack.Screen name="mentora" options={{ headerShown: false }} /> */}
       </Stack>
     </CustomThemeProvider>
   );

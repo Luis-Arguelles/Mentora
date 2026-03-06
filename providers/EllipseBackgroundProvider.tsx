@@ -53,10 +53,10 @@ const createStyles = (theme: any) =>
     rightEllipseContainer: {
       position: "absolute",
       right: -theme.scale(100),
-      bottom: theme.verticalScale(20),
+      bottom: -theme.verticalScale(10),
       width: theme.scale(500),
       height: theme.verticalScale(500),
-      opacity: 0.6,
+      opacity: 0.8,
     },
     fullImage: {
       width: "100%",

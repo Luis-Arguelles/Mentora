@@ -15,6 +15,7 @@ export default function TabLayout() {
   return (
     <Tabs
       initialRouteName="index"
+      backBehavior="history"
       screenOptions={{
         tabBarActiveTintColor: "black",
         tabBarInactiveTintColor: theme.colors.primary,
@@ -26,6 +27,7 @@ export default function TabLayout() {
           shadowOpacity: 0, // 5. Removes the shadow on iOS
         },
         headerShown: false,
+        tabBarHideOnKeyboard: true,
       }}
     >
       <Tabs.Screen
@@ -74,6 +76,13 @@ export default function TabLayout() {
               }}
             />
           ),
+        }}
+      />
+      <Tabs.Screen
+        name="mentora"
+        options={{
+          headerShown: false,
+          href: null,
         }}
       />
       <Tabs.Screen

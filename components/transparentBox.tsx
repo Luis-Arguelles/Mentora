@@ -1,27 +1,32 @@
 import { useTheme } from "@/providers/ThemeProvider";
-import { StyleSheet, Text, View } from "react-native";
-
+import { Pressable, StyleSheet, Text, View } from "react-native";
 interface TransparentBoxProps {
+  id?: string;
   width?: number;
   height?: number;
   title: string;
   content?: string;
+  handleOnPress?: (id: string) => void;
 }
 
 const TransparentBox = ({
+  id,
   width = 50,
   height = 40,
   title,
   content,
+  handleOnPress,
 }: TransparentBoxProps) => {
   const theme = useTheme();
   const styles = createStyles(theme, width, height);
 
   return (
-    <View style={styles.mainContainer}>
-      <Text style={styles.title}>{title}</Text>
-      {content && <Text style={styles.content}>{content}</Text>}
-    </View>
+    <Pressable onPress={() => handleOnPress!(id!)}>
+      <View style={styles.mainContainer}>
+        <Text style={styles.title}>{title}</Text>
+        {content && <Text style={styles.content}>{content}</Text>}
+      </View>
+    </Pressable>
   );
 };
 

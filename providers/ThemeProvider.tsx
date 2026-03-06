@@ -63,6 +63,7 @@ export const CustomThemeProvider = ({
         regular: "Roboto-Regular",
         medium: "Roboto-Medium",
         bold: "Roboto-Bold",
+        extraBold: "Roboto-ExtraBold",
         mono: "SpaceMono",
       },
       // Expose the raw functions if needed for custom values
