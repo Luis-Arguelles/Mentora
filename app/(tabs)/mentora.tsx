@@ -1,6 +1,7 @@
 import EllipseBackgroundProvider from "@/providers/EllipseBackgroundProvider";
 import { useTheme } from "@/providers/ThemeProvider";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
+import * as DocumentPicker from "expo-document-picker";
 import { useEffect, useRef, useState } from "react";
 import {
   AppState,
@@ -19,6 +20,38 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 const brain = require("../../assets/images/brain.png");
 const micIcon = require("../../assets/images/micIcon.png");
 const uploadIcon = require("../../assets/images/uploadIcon.png");
+
+const handleUpload = async () => {
+  try {
+    const result = await DocumentPicker.getDocumentAsync({
+      type: "application/pdf",
+      copyToCacheDirectory: true,
+    });
+
+    if (!result.canceled) {
+      const file = result.assets[0];
+
+      // 1. You would call your Supabase function here to get a Presigned URL
+      // const { url } = await supabase.functions.invoke('get-r2-presigned-url', {
+      //   body: { fileName: file.name }
+      // });
+
+      // 2. Upload the file to the URL (Placeholder logic for the UI)
+      console.log("Uploading:", file.name);
+
+      // Example of a fetch upload:
+      // await fetch(url, {
+      //   method: 'PUT',
+      //   body: file,
+      //   headers: { 'Content-Type': 'application/pdf' }
+      // });
+
+      alert("PDF subido con éxito!");
+    }
+  } catch (error) {
+    console.error("Error picking document:", error);
+  }
+};
 
 const TransparentInput = ({ styles }: { styles: any }) => {
   const inputRef = useRef<TextInput>(null);
@@ -50,7 +83,7 @@ const TransparentInput = ({ styles }: { styles: any }) => {
         />
 
         <View style={styles.iconsContainer}>
-          <TouchableOpacity style={styles.inputIcon}>
+          <TouchableOpacity style={styles.inputIcon} onPress={handleUpload}>
             <Image source={uploadIcon} />
           </TouchableOpacity>
           <TouchableOpacity style={styles.inputIcon}>

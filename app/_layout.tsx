@@ -1,5 +1,4 @@
-import { useColorScheme } from "@/components/useColorScheme";
-import { useAuth } from "@/providers/AuthProvider";
+import { AuthProvider, useAuth } from "@/providers/AuthProvider";
 import { CustomThemeProvider } from "@/providers/ThemeProvider";
 import {
   Roboto_400Regular,
@@ -16,14 +15,11 @@ import "react-native-reanimated";
 
 export { ErrorBoundary } from "expo-router";
 
-// export const unstable_settings = {
-//   initialRouteName: "(tabs)",
-// };
-
+// Keep the splash screen visible
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
-  const [loaded, error] = useFonts({
+  const [fontsLoaded, fontError] = useFonts({
     SpaceMono: require("../assets/fonts/SpaceMono-Regular.ttf"),
     "Roboto-Regular": Roboto_400Regular,
     "Roboto-Bold": Roboto_700Bold,
@@ -32,46 +28,44 @@ export default function RootLayout() {
     ...FontAwesome.font,
   });
 
-  const { session, loading } = useAuth();
-  const router = useRouter();
-
-  // useEffect(() => {
-  //   if (loading) return;
-
-  //   if (session) {
-  //     router.replace("/(tabs)"); // User is logged in
-  //   } else {
-  //     router.replace("/(auth)/login"); // User is logged out
-  //   }
-  // }, [session, loading]);
-
   useEffect(() => {
-    if (error) throw error;
-  }, [error]);
+    if (fontError) throw fontError;
+  }, [fontError]);
 
-  useEffect(() => {
-    if (loaded) {
-      SplashScreen.hideAsync();
-    }
-  }, [loaded]);
-
-  if (!loaded) {
-    return null;
-  }
-
-  return <RootLayoutNav />;
-}
-
-function RootLayoutNav() {
-  const colorScheme = useColorScheme();
+  // If fonts fail or are still loading, we stay on the native Splash Screen
+  if (!fontsLoaded) return null;
 
   return (
-    <CustomThemeProvider>
-      <Stack initialRouteName="(tabs)">
-        <Stack.Screen name="(auth)/login" options={{ headerShown: false }} />
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        {/* <Stack.Screen name="mentora" options={{ headerShown: false }} /> */}
-      </Stack>
-    </CustomThemeProvider>
+    <AuthProvider>
+      <CustomThemeProvider>
+        <RootLayoutNav fontsLoaded={fontsLoaded} />
+      </CustomThemeProvider>
+    </AuthProvider>
+  );
+}
+
+function RootLayoutNav({ fontsLoaded }: { fontsLoaded: boolean }) {
+  const { session, loading: authLoading } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (authLoading) return;
+
+    if (fontsLoaded) {
+      SplashScreen.hideAsync();
+    }
+
+    if (session) {
+      router.replace("/(tabs)");
+    } else {
+      router.replace("/(auth)/login");
+    }
+  }, [session, authLoading, fontsLoaded]);
+
+  return (
+    <Stack screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="(auth)/login" />
+      <Stack.Screen name="(tabs)" />
+    </Stack>
   );
 }

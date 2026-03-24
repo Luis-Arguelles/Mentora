@@ -1,7 +1,15 @@
 import { supabase } from "@/lib/supabase";
 import { useTheme } from "@/providers/ThemeProvider";
 import { useState } from "react";
-import { Alert, Image, StyleSheet, Text, TextInput, View } from "react-native";
+import {
+  Alert,
+  Image,
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from "react-native";
 
 const loginBrain = require("@/assets/images/loginBrain.png");
 
@@ -31,8 +39,40 @@ const Login = () => {
         <Text style={styles.titleText}>MENTORA</Text>
       </View>
       <View style={styles.inputBoxContainer}>
-        <TextInput style={styles.textInput} placeholder="Correo electrónico" />
-        <TextInput style={styles.textInput} placeholder="Contraseña" />
+        <TextInput
+          style={styles.textInput}
+          placeholder="Correo electrónico"
+          value={email}
+          onChangeText={(text) => setEmail(text)}
+          keyboardType="email-address"
+        />
+        <TextInput
+          style={styles.textInput}
+          placeholder="Contraseña"
+          value={password}
+          onChangeText={(text) => setPassword(text)}
+          secureTextEntry={true}
+        />
+        <Pressable
+          onPress={signInWithEmail}
+          disabled={loading}
+          style={{
+            backgroundColor: theme.colors.textPrimary,
+            padding: 15,
+            borderRadius: 10,
+            marginTop: 20,
+          }}
+        >
+          <Text
+            style={{
+              color: theme.colors.background,
+              textAlign: "center",
+              fontWeight: "bold",
+            }}
+          >
+            {loading ? "Iniciando sesión..." : "Entrar"}
+          </Text>
+        </Pressable>
         <Text style={styles.passwordAndAccountTexts}>
           ¿Olvidasate la contraseña?
         </Text>
