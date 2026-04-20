@@ -1,3 +1,4 @@
+import { supabase } from "@/lib/supabase";
 import EllipseBackgroundProvider from "@/providers/EllipseBackgroundProvider";
 import { useTheme } from "@/providers/ThemeProvider";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
@@ -23,33 +24,73 @@ const uploadIcon = require("../../assets/images/uploadIcon.png");
 
 const handleUpload = async () => {
   try {
+    // 1. Pick the PDF
     const result = await DocumentPicker.getDocumentAsync({
       type: "application/pdf",
       copyToCacheDirectory: true,
     });
 
-    if (!result.canceled) {
-      const file = result.assets[0];
+    if (result.canceled) return;
 
-      // 1. You would call your Supabase function here to get a Presigned URL
-      // const { url } = await supabase.functions.invoke('get-r2-presigned-url', {
-      //   body: { fileName: file.name }
-      // });
+    const file = result.assets[0];
+    console.log("Preparing upload for:", file.name);
 
-      // 2. Upload the file to the URL (Placeholder logic for the UI)
-      console.log("Uploading:", file.name);
+    // 2. Get a Presigned URL from your Supabase Edge Function
+    // This hides your Cloudflare credentials from the mobile app
+    const { data: signData, error: signError } =
+      await supabase.functions.invoke("get-r2-url", {
+        body: {
+          fileName: file.name,
+          contentType: "application/pdf",
+        },
+      });
 
-      // Example of a fetch upload:
-      // await fetch(url, {
-      //   method: 'PUT',
-      //   body: file,
-      //   headers: { 'Content-Type': 'application/pdf' }
-      // });
+    if (signError) throw signError;
 
-      alert("PDF subido con éxito!");
-    }
+    // 3. Convert the local URI to a Binary Blob
+    // This resolves the "No overload matches this call" error
+    const blob = await new Promise<Blob>((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.onload = function () {
+        resolve(xhr.response);
+      };
+      xhr.onerror = function (e) {
+        reject(new TypeError("Network request failed"));
+      };
+      xhr.responseType = "blob";
+      xhr.open("GET", file.uri, true);
+      xhr.send(null);
+    });
+
+    // 4. Upload directly to Cloudflare R2
+    const response = await fetch(signData.uploadUrl, {
+      method: "PUT",
+      body: blob,
+      headers: {
+        "Content-Type": "application/pdf",
+      },
+    });
+
+    if (!response.ok) throw new Error("Cloudflare R2 upload failed");
+
+    // 5. Trigger the RAG Processor
+    // This tells Supabase to download from R2, extract text, and embed vectors
+    const { error: processError } = await supabase.functions.invoke(
+      "process-pdf-rag",
+      {
+        body: {
+          r2Key: signData.key,
+          originalName: file.name,
+        },
+      },
+    );
+
+    if (processError) throw processError;
+
+    alert("¡Éxito! El libro se ha subido y Mentora lo está analizando.");
   } catch (error) {
-    console.error("Error picking document:", error);
+    console.error("Upload process failed:", error);
+    alert("Hubo un fallo en la subida. Revisa la consola para más detalles.");
   }
 };
 
