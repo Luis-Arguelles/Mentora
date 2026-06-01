@@ -33,30 +33,27 @@ const handleUpload = async () => {
     if (result.canceled) return;
 
     const file = result.assets[0];
+    // Generate a unique key for R2 early so we can use it in multiple steps
+    const r2Key = `library/${Date.now()}-${file.name}`;
+
     console.log("Preparing upload for:", file.name);
 
-    // 2. Get a Presigned URL from your Supabase Edge Function
-    // This hides your Cloudflare credentials from the mobile app
+    // 2. Get a Presigned URL
     const { data: signData, error: signError } =
       await supabase.functions.invoke("get-r2-url", {
         body: {
-          fileName: file.name,
+          fileName: r2Key,
           contentType: "application/pdf",
         },
       });
 
     if (signError) throw signError;
 
-    // 3. Convert the local URI to a Binary Blob
-    // This resolves the "No overload matches this call" error
+    // 3. Convert URI to Blob
     const blob = await new Promise<Blob>((resolve, reject) => {
       const xhr = new XMLHttpRequest();
-      xhr.onload = function () {
-        resolve(xhr.response);
-      };
-      xhr.onerror = function (e) {
-        reject(new TypeError("Network request failed"));
-      };
+      xhr.onload = () => resolve(xhr.response);
+      xhr.onerror = () => reject(new TypeError("Network request failed"));
       xhr.responseType = "blob";
       xhr.open("GET", file.uri, true);
       xhr.send(null);
@@ -66,21 +63,34 @@ const handleUpload = async () => {
     const response = await fetch(signData.uploadUrl, {
       method: "PUT",
       body: blob,
-      headers: {
-        "Content-Type": "application/pdf",
-      },
+      headers: { "Content-Type": "application/pdf" },
     });
 
-    if (!response.ok) throw new Error("Cloudflare R2 upload failed");
+    if (!response.ok) throw new Error("R2 upload failed");
+
+    // --- NEW STEP: Register the book in the database ---
+    // We need the database ID to link the AI-generated chunks to this specific book
+    const { data: docRecord, error: docError } = await supabase
+      .from("documents")
+      .insert({
+        file_name: file.name,
+        r2_path: r2Key,
+        file_status: "processing",
+      })
+      .select()
+      .single();
+
+    if (docError) throw docError;
 
     // 5. Trigger the RAG Processor
-    // This tells Supabase to download from R2, extract text, and embed vectors
+    // We now pass the documentId we just created
     const { error: processError } = await supabase.functions.invoke(
       "process-pdf-rag",
       {
         body: {
-          r2Key: signData.key,
+          r2Key: r2Key,
           originalName: file.name,
+          documentId: docRecord.id, // Successfully linked!
         },
       },
     );
@@ -94,7 +104,30 @@ const handleUpload = async () => {
   }
 };
 
-const TransparentInput = ({ styles }: { styles: any }) => {
+interface TransparentInputProps {
+  styles: any;
+  isProcessing: boolean;
+  setIsProcessing: (isProcessing: boolean) => void;
+}
+
+const TransparentInput = ({
+  styles,
+  isProcessing,
+  setIsProcessing,
+}: TransparentInputProps) => {
+  if (!isProcessing) setIsProcessing(true);
+  else {
+    return (
+      <View style={styles.transparentInputContainer}>
+        <View style={styles.inputWrapper}>
+          <Text style={{ color: "#666", fontSize: 16 }}>
+            Procesando tu libro...
+          </Text>
+        </View>
+      </View>
+    );
+  }
+
   const inputRef = useRef<TextInput>(null);
 
   useEffect(() => {
@@ -142,6 +175,7 @@ const Mentora = () => {
   const insets = useSafeAreaInsets();
   const tabBarHeight = useBottomTabBarHeight();
   const [appStateKey, setAppStateKey] = useState(0);
+  const [isProcessing, setIsProcessing] = useState(false);
 
   useEffect(() => {
     const subscription = AppState.addEventListener("change", (nextAppState) => {
@@ -184,7 +218,11 @@ const Mentora = () => {
             <Image source={brain} style={styles.brainImage} />
           </View>
 
-          <TransparentInput styles={styles} />
+          <TransparentInput
+            styles={styles}
+            isProcessing={isProcessing}
+            setIsProcessing={setIsProcessing}
+          />
         </View>
       </KeyboardAvoidingView>
     </EllipseBackgroundProvider>

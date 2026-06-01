@@ -1,5 +1,4 @@
-import { PutObjectCommand, S3Client } from "s3";
-import { getSignedUrl } from "s3-presigner";
+import { S3Client } from "npm:@bradenmacdonald/s3-lite-client";
 import { serve } from "std/http/server.ts";
 
 const corsHeaders = {
@@ -9,32 +8,38 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
-  // Handle CORS preflight
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
 
   try {
-    const { fileName, contentType } = await req.json();
+    const body = await req.json();
+    console.log("Incoming get-r2-url payload:", body);
 
-    const r2Client = new S3Client({
+    // Fallback protection in case Postman sends fileName or filename
+    const fileName = body.fileName || body.filename;
+    if (!fileName) {
+      throw new Error("Missing 'fileName' property in request body.");
+    }
+
+    const rawEndpoint = Deno.env.get("R2_ENDPOINT") || "";
+    const cleanEndpoint = rawEndpoint.replace(/^https?:\/\//, "");
+
+    const s3Client = new S3Client({
+      endPoint: cleanEndpoint,
+      accessKey: Deno.env.get("R2_ACCESS_KEY_ID")!,
+      secretKey: Deno.env.get("R2_SECRET_ACCESS_KEY")!,
+      bucket: Deno.env.get("R2_BUCKET_NAME")!,
       region: "auto",
-      endpoint: Deno.env.get("R2_ENDPOINT")!,
-      credentials: {
-        accessKeyId: Deno.env.get("R2_ACCESS_KEY_ID")!,
-        secretAccessKey: Deno.env.get("R2_SECRET_ACCESS_KEY")!,
-      },
+      useSSL: true,
     });
 
     const key = `library/${Date.now()}-${fileName}`;
 
-    const command = new PutObjectCommand({
-      Bucket: Deno.env.get("R2_BUCKET_NAME"),
-      Key: key,
-      ContentType: contentType,
+    // Generates the presigned upload URL securely using the key string
+    const uploadUrl = await s3Client.getPresignedUrl("PUT", key, {
+      expirySeconds: 3600,
     });
-
-    const uploadUrl = await getSignedUrl(r2Client, command, { expiresIn: 60 });
 
     return new Response(JSON.stringify({ uploadUrl, key }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },

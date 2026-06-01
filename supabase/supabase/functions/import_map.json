@@ -1,6 +1,8 @@
 {
   "imports": {
     "std/": "https://deno.land/std@0.168.0/",
+    "s3": "https://esm.sh/@aws-sdk/client-s3@3.341.0?no-check",
+    "s3-presigner": "https://esm.sh/@aws-sdk/s3-request-presigner@3.341.0?no-check",
     "supabase": "https://esm.sh/@supabase/supabase-js@2",
     "gemini": "https://esm.sh/@google/generative-ai@0.1.1",
     "pdf-parse": "npm:pdf-parse@^1.1.1"

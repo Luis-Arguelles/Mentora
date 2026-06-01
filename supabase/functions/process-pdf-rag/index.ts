@@ -1,122 +1,172 @@
 import { GoogleGenerativeAI } from "gemini";
 import { Buffer } from "node:buffer";
+import { S3Client } from "npm:@bradenmacdonald/s3-lite-client";
 import pdf from "pdf-parse";
-import { GetObjectCommand, S3Client } from "s3";
 import { serve } from "std/http/server.ts";
 import { createClient } from "supabase";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
-};
+// Helper function maximized for Gemini's large context window to minimize chunk count
+function chunkText(text: string, maxLength = 8000, overlap = 800): string[] {
+  const chunks: string[] = [];
+  let i = 0;
 
-serve(async (req: Request) => {
-  if (req.method === "OPTIONS")
-    return new Response("ok", { headers: corsHeaders });
+  const cleanText = text.replace(/\s+/g, " ").trim();
 
+  while (i < cleanText.length) {
+    chunks.push(cleanText.slice(i, i + maxLength));
+    i += maxLength - overlap;
+  }
+  return chunks;
+}
+
+serve(async (req) => {
   try {
-    const { r2Key, originalName, documentId } = await req.json();
+    const body = await req.json();
+    console.log("Processing pipeline started for payload:", body);
 
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+    const key = body.key || body.r2Key;
+    if (!key) {
+      throw new Error(
+        "Missing target storage file 'key' or 'r2Key' in request body.",
+      );
+    }
+
+    // 1. Initialize Cloudflare R2 Client
+    const rawEndpoint = Deno.env.get("R2_ENDPOINT") || "";
+    const cleanEndpoint = rawEndpoint.replace(/^https?:\/\//, "");
+
+    const s3Client = new S3Client({
+      endPoint: cleanEndpoint,
+      accessKey: Deno.env.get("R2_ACCESS_KEY_ID")!,
+      secretKey: Deno.env.get("R2_SECRET_ACCESS_KEY")!,
+      bucket: Deno.env.get("R2_BUCKET_NAME")!,
+      region: "auto",
+      useSSL: true,
+    });
+
+    // 2. Download the binary PDF file from R2
+    console.log(`Downloading file from R2: ${key}`);
+    const s3Object = await s3Client.getObject(key);
+    const pdfArrayBuffer = await s3Object.arrayBuffer();
+    const pdfBuffer = Buffer.from(pdfArrayBuffer);
+
+    // 3. Extract the text data from the PDF Buffer
+    console.log("Parsing PDF text content...");
+    const parsedPdf = await pdf(pdfBuffer);
+    const rawText = parsedPdf.text;
+
+    if (!rawText || rawText.trim().length === 0) {
+      throw new Error(
+        "PDF processing completed, but no text content could be extracted.",
+      );
+    }
+
+    // High-capacity chunks mean drastically fewer total network requests
+    const chunks = chunkText(rawText);
+    console.log(
+      `Successfully generated ${chunks.length} high-density text chunks.`,
     );
+
+    // 4. Initialize Database & AI Clients
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseServiceKey =
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ||
+      Deno.env.get("SUPABASE_ANON_KEY")!;
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     const genAI = new GoogleGenerativeAI(Deno.env.get("GEMINI_API_KEY")!);
     const embeddingModel = genAI.getGenerativeModel({
-      model: "text-embedding-004",
+      model: "gemini-embedding-001",
     });
 
-    const r2Client = new S3Client({
-      region: "auto",
-      endpoint: Deno.env.get("R2_ENDPOINT")!,
-      credentials: {
-        accessKeyId: Deno.env.get("R2_ACCESS_KEY_ID")!,
-        secretAccessKey: Deno.env.get("R2_SECRET_ACCESS_KEY")!,
-      },
-    });
+    // 5. Create Parent Record in 'documents' table
+    const fileName = key.split("/").pop() || "uploaded-document.pdf";
+    const { data: documentRecord, error: docError } = await supabase
+      .from("documents")
+      .insert({
+        file_name: fileName,
+        r2_path: key,
+      })
+      .select()
+      .single();
 
-    // 1. Fetch PDF from R2
-    const { Body } = await r2Client.send(
-      new GetObjectCommand({
-        Bucket: Deno.env.get("R2_BUCKET_NAME"),
-        Key: r2Key,
-      }),
+    if (docError)
+      throw new Error(
+        `Database error creating parent document: ${docError.message}`,
+      );
+    const documentId = documentRecord.id;
+
+    // 6. Batch Generate Vector Embeddings with Linear Rate-Limit Throttling
+    console.log(
+      `Preparing to safely embed ${chunks.length} chunks via linear pacing...`,
     );
-    const pdfBytes = await Body?.transformToByteArray()!;
 
-    // 2. Extract Text
-    const pdfData = await pdf(Buffer.from(pdfBytes));
-    const fullText = pdfData.text;
+    // Processing 5 chunks with a 3.5s pause keeps consumption locked at ~85 RPM max
+    const BATCH_SIZE = 5;
+    const totalEmbeddings: number[][] = [];
 
-    // 3. Chunking with Overlap
-    // size: 2000 chars (~300-400 words)
-    // overlap: 200 chars (~30-40 words)
-    const chunks = chunkTextWithOverlap(fullText, 2000, 200);
+    for (let i = 0; i < chunks.length; i += BATCH_SIZE) {
+      const currentBatchChunks = chunks.slice(i, i + BATCH_SIZE);
 
-    // 4. Vectorize and Store
-    for (const chunk of chunks) {
-      const result = await embeddingModel.embedContent(chunk);
-      const embedding = result.embedding.values;
+      console.log(
+        `Embedding chunks ${i + 1} to ${Math.min(i + BATCH_SIZE, chunks.length)} of ${chunks.length}...`,
+      );
 
-      const { error } = await supabase.from("document_sections").insert({
-        document_id: documentId,
-        content: chunk,
-        embedding: embedding,
-        metadata: {
-          source: originalName,
-          r2_path: r2Key,
-          processed_at: new Date().toISOString(),
-        },
+      const batchResponse = await embeddingModel.batchEmbedContents({
+        requests: currentBatchChunks.map((chunkContent) => ({
+          content: { parts: [{ text: chunkContent }] },
+          outputDimensionality: 768,
+        })),
       });
 
-      if (error) throw error;
+      const batchVectors = batchResponse.embeddings.map((e) => e.values);
+      totalEmbeddings.push(...batchVectors);
+
+      // Linear pacing pause to guarantee we stay below the 100 rolling requests-per-minute threshold
+      if (i + BATCH_SIZE < chunks.length) {
+        await new Promise((resolve) => setTimeout(resolve, 3500));
+      }
     }
 
+    // 7. Bulk Save all chunks and embeddings into Supabase
+    console.log("Assembling bulk insertion payload...");
+
+    const sectionsToInsert = chunks.map((chunkContent, index) => ({
+      document_id: documentId,
+      content: chunkContent,
+      embedding: totalEmbeddings[index],
+    }));
+
+    console.log(
+      `Persisting ${sectionsToInsert.length} sections to 'document_sections' tables...`,
+    );
+    const { error: bulkError } = await supabase
+      .from("document_sections")
+      .insert(sectionsToInsert);
+
+    if (bulkError) {
+      throw new Error(
+        `Database error performing bulk section insert: ${bulkError.message}`,
+      );
+    }
+
+    console.log("Pipeline processing successfully concluded!");
     return new Response(
       JSON.stringify({
-        message: `Successfully processed ${chunks.length} chunks.`,
+        success: true,
+        message: "Document parsed, indexed, and embedded successfully.",
+        documentId,
+        chunksProcessed: chunks.length,
       }),
-      {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      },
+      { headers: { "Content-Type": "application/json" }, status: 200 },
     );
   } catch (error) {
-    const err = error as Error;
-    return new Response(JSON.stringify({ error: err.message }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-      status: 500,
+    const errorMessage =
+      error instanceof Error ? error.message : "Unknown pipeline error";
+    console.error("Critical Execution Failure:", errorMessage);
+    return new Response(JSON.stringify({ error: errorMessage }), {
+      headers: { "Content-Type": "application/json" },
+      status: 400,
     });
   }
 });
-
-/**
- * Creates overlapping chunks of text
- * @param text The full text string
- * @param size Target characters per chunk
- * @param overlap How many characters to "re-read" from the previous chunk
- */
-
-function chunkTextWithOverlap(
-  text: string,
-  size: number,
-  overlap: number,
-): string[] {
-  const chunks: string[] = [];
-  let start = 0;
-
-  while (start < text.length) {
-    const end = start + size;
-    const chunk = text.substring(start, end);
-    chunks.push(chunk);
-
-    // Move start pointer forward, but subtract overlap
-    start += size - overlap;
-
-    // Safety check to avoid infinite loops if overlap >= size
-    if (size <= overlap) break;
-  }
-
-  return chunks;
-}
